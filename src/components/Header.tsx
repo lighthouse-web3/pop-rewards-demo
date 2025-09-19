@@ -25,11 +25,13 @@ export default function Header() {
   const { ready, authenticated, login, logout } = usePrivy();
   const [open, setOpen] = useState(false);
 
+  const authed = ready && authenticated;
+
   useEffect(() => {
-    if (ready && authenticated && pathname !== "/dashboard") {
+    if (authed && pathname !== "/dashboard") {
       router.replace("/dashboard");
     }
-  }, [ready, authenticated, pathname, router]);
+  }, [authed, pathname, router]);
 
   const handleLogin = async () => {
     await login();
@@ -44,14 +46,25 @@ export default function Header() {
     href,
     children,
     icon,
+    requiresAuth = false,
   }: {
     href: string;
     children: React.ReactNode;
     icon: React.ReactNode;
+    requiresAuth?: boolean;
   }) => (
     <Link
       href={href}
-      onClick={() => setOpen(false)}
+      onClick={(e) => {
+        // if this route needs auth and user isn't authed, open login instead
+        if (requiresAuth && !authed) {
+          e.preventDefault();
+          setOpen(false);
+          handleLogin();
+          return;
+        }
+        setOpen(false);
+      }}
       className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${
         pathname === href ? "bg-white/10" : "hover:bg-white/5"
       }`}
@@ -69,7 +82,7 @@ export default function Header() {
       >
         <div className="mx-auto max-w-8xl px-4 md:px-6">
           <div className="flex h-14 md:h-16 items-center justify-between">
-            {/* Left: hamburger (mobile) + logo */}
+            {/* Left: logo + hamburger */}
             <div className="flex items-center justify-between w-full gap-3">
               <Link href={"/"} className="flex items-center gap-3">
                 <Image
@@ -94,11 +107,11 @@ export default function Header() {
 
             {/* Right: actions (hidden on mobile) */}
             <div className="hidden items-center gap-2 md:flex">
-              {!ready ? null : authenticated ? (
+              {!ready ? null : authed ? (
                 <>
                   <button
                     onClick={() => router.push("/dashboard")}
-                    className="inline-flex h-9 items-center rounded-full border border-white/15 px-3 text-sm text-white hover:bg:white/10 hover:bg-white/10"
+                    className="inline-flex h-9 items-center rounded-full border border-white/15 px-3 text-sm text-white hover:bg-white/10"
                   >
                     Dashboard
                   </button>
@@ -136,58 +149,68 @@ export default function Header() {
 
       {/* Mobile drawer */}
       <MobileDrawer open={open} onClose={() => setOpen(false)}>
-        {/* Primary mobile CTA */}
+        {/* Only show dashboard nav + Add Data when authenticated */}
+        {authed && (
+          <>
+            <nav className="grid gap-1">
+              <NavButton
+                href="/dashboard"
+                icon={<LayoutGrid className="h-4 w-4" />}
+                requiresAuth
+              >
+                Overview
+              </NavButton>
+              <NavButton
+                href="/dashboard/leaderboard"
+                icon={<Trophy className="h-4 w-4" />}
+                requiresAuth
+              >
+                Leaderboard
+              </NavButton>
+              <NavButton
+                href="/dashboard/journey"
+                icon={<Route className="h-4 w-4" />}
+                requiresAuth
+              >
+                Journey
+              </NavButton>
+              <NavButton
+                href="/dashboard/connected"
+                icon={<Plug2 className="h-4 w-4" />}
+                requiresAuth
+              >
+                Connected Data
+              </NavButton>
+            </nav>
 
-        <nav className="grid gap-1">
-          <NavButton
-            href="/dashboard"
-            icon={<LayoutGrid className="h-4 w-4" />}
-          >
-            Overview
-          </NavButton>
-          <NavButton
-            href="/dashboard/leaderboard"
-            icon={<Trophy className="h-4 w-4" />}
-          >
-            Leaderboard
-          </NavButton>
-          <NavButton
-            href="/dashboard/journey"
-            icon={<Route className="h-4 w-4" />}
-          >
-            Journey
-          </NavButton>
-          <NavButton
-            href="/dashboard/connected"
-            icon={<Plug2 className="h-4 w-4" />}
-          >
-            Connected Data
-          </NavButton>
-        </nav>
+            <div className="my-4 h-px bg-white/10" />
 
-        <div className="my-4 h-px bg-white/10" />
-        <button
-          onClick={() => {
-            setOpen(false);
-            // emit a custom event or open your connect-provider modal
-            document
-              .getElementById("connect-data-modal")
-              ?.dispatchEvent(new CustomEvent("open"));
-          }}
-          className="mb-3 flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2 font-medium text-black"
-          style={{
-            background: `linear-gradient(90deg, ${COLORS.yellowFrom}, ${COLORS.yellowTo})`,
-            color: "#061106",
-          }}
-        >
-          <Plus className="h-5 w-5" /> Add Data
-        </button>
-        {/* Secondary actions */}
+            <button
+              onClick={() => {
+                setOpen(false);
+                document
+                  .getElementById("connect-data-modal")
+                  ?.dispatchEvent(new CustomEvent("open"));
+              }}
+              className="mb-3 flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2 font-medium text-black"
+              style={{
+                background: `linear-gradient(90deg, ${COLORS.yellowFrom}, ${COLORS.yellowTo})`,
+                color: "#061106",
+              }}
+            >
+              <Plus className="h-5 w-5" /> Add Data
+            </button>
+
+            <div className="my-4 h-px bg-white/10" />
+          </>
+        )}
+
+        {/* Secondary actions always visible */}
         <div className="grid gap-2">
           <button
             onClick={() => {
               setOpen(false);
-              if (!authenticated) handleLogin();
+              if (!authed) handleLogin();
               else window.location.assign("/airdrop");
             }}
             className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/15 px-3 py-2 text-sm hover:bg-white/10"
@@ -195,7 +218,7 @@ export default function Header() {
             <Gift className="h-4 w-4" /> $POP Airdrop
           </button>
 
-          {!ready ? null : authenticated ? (
+          {!ready ? null : authed ? (
             <button
               onClick={() => {
                 setOpen(false);
