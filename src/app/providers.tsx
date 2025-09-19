@@ -6,9 +6,9 @@ import { sepolia, mainnet } from "viem/chains";
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <PrivyProvider
-      appId={process.env.NEXT_PUBLIC_APP_ID!}
+      appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID!}
       // include clientId only if you use App Clients in Privy
-      clientId={process.env.NEXT_PUBLIC_CLIENT_ID}
+      clientId={process.env.NEXT_PUBLIC_PRIVY_CLIENT_ID}
       config={{
         // real wallets only, no embedded wallet creation
         loginMethods: ["wallet"],
