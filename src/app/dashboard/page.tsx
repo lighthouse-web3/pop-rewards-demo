@@ -40,7 +40,6 @@ export default function DashboardPage() {
       // Trigger the verification session
       await reclaimProofRequest.triggerReclaimFlow();
 
-      // Start listening for proof submissions
       await reclaimProofRequest.startSession({
         onSuccess: (proofs: any) => {
           setProofs(proofs);
