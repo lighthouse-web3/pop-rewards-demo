@@ -4,7 +4,7 @@ export default function HowCard({
   title,
   desc,
 }: {
-  icon: string;
+  icon: React.ReactNode; // changed from string
   title: string;
   desc: string;
 }) {

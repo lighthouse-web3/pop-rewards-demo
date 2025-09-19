@@ -9,6 +9,15 @@ import HowCard from "@/components/ui/HowCard";
 import FAQ from "@/components/ui/FAQ";
 import { usePrivy } from "@privy-io/react-auth";
 import { useRouter } from "next/navigation";
+import {
+  Shield,
+  Wallet,
+  Gift,
+  Link2,
+  FileCheck,
+  Database,
+  Coins,
+} from "lucide-react";
 
 export default function HomePage() {
   const [loading] = useState(false);
@@ -38,11 +47,12 @@ export default function HomePage() {
             className="text-4xl font-semibold leading-tight md:text-6xl"
             style={{ color: COLORS.headline }}
           >
-            Get rewarded for your Amazon data
+            Turn your shopping into rewards.
           </h1>
           <p className="mt-4 max-w-2xl text-pretty text-zinc-300">
-            Take control of your shopping data. Prove it privately, store a
-            redacted summary on Lighthouse, and earn AMZ.
+            Your Amazon order history has value. With POP Rewards, you stay in
+            control of your data while earning crypto for every purchase you
+            prove.
           </p>
           <button
             onClick={handleLogin}
@@ -64,19 +74,19 @@ export default function HomePage() {
             </h2>
             <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
               <HowCard
-                icon="🛡️"
-                title="Privacy First"
-                desc="Zero-knowledge proofs via Reclaim. We store only a redacted summary on Lighthouse."
+                icon={<Shield className="w-6 h-6" />}
+                title="Your data stays private"
+                desc="We never see your full order details. Proofs are generated privately and only a summary is stored."
               />
               <HowCard
-                icon="🔑"
-                title="Self-custody Sign-in"
-                desc="Wallet/Privy login. You control when to connect providers and share proofs."
+                icon={<Wallet className="w-6 h-6" />}
+                title="Sign in with your wallet"
+                desc="No passwords, no hassle. Use your own crypto wallet to log in securely."
               />
               <HowCard
-                icon="🎯"
-                title="Real Rewards"
-                desc="Earn POP for recent verified orders. Points logic is transparent and on-chain."
+                icon={<Gift className="w-6 h-6" />}
+                title="Rewards you can use"
+                desc="Earn POP tokens every time you prove valid purchases. Redeem them for perks, swaps, or hold them for future value."
               />
             </div>
           </div>
@@ -90,22 +100,22 @@ export default function HomePage() {
             </h2>
             <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
               <HowCard
-                icon="🔗"
+                icon={<Link2 className="w-6 h-6" />}
                 title="Connect Your Wallet"
-                desc="Use an EVM wallet like MetaMask to get started."
+                desc="Use an EVM wallet to get started."
               />
               <HowCard
-                icon="🧾"
+                icon={<FileCheck className="w-6 h-6" />}
                 title="Verify Purchases"
-                desc="Run Reclaim to generate a private proof of your orders."
+                desc="Run a quick check with zkTLS to prove your Amazon purchases privately."
               />
               <HowCard
-                icon="🗂️"
-                title="Store Summary"
+                icon={<Database className="w-6 h-6" />}
+                title="Get credit for your data"
                 desc="We upload a redacted JSON summary to Lighthouse."
               />
               <HowCard
-                icon="🎁"
+                icon={<Coins className="w-6 h-6" />}
                 title="Earn Rewards"
                 desc="Get POP tokens based on recent valid orders."
               />
@@ -122,19 +132,19 @@ export default function HomePage() {
             <div className="mt-8 grid gap-3">
               <FAQ
                 q="How is my data used"
-                a="Your Reclaim proof is verified on the backend. We store only a sanitized summary on Lighthouse and hash sensitive fields."
+                a="Only the proof of purchase is stored on Lighthouse. We never keep sensitive details."
               />
               <FAQ
                 q="What devices are supported"
-                a="Any device with a modern browser and an Ethereum wallet like MetaMask or Rainbow."
+                a="Any device with a modern browser and an Ethereum wallet."
               />
               <FAQ
                 q="What rewards can I earn"
-                a="AMZ ERC20 tokens on Sepolia for the demo. Amount depends on your recent order count."
+                a="POP tokens, based on how many valid orders you prove."
               />
               <FAQ
                 q="Can I withdraw rewards as cash"
-                a="Not in the demo. You can transfer AMZ like any ERC20."
+                a="Yes, POP is a crypto token. You can swap it or use it in our ecosystem as we grow."
               />
             </div>
           </div>
@@ -144,10 +154,11 @@ export default function HomePage() {
         <section className="relative z-10 mx-auto flex w-full flex-col items-center px-6 py-24 md:py-28 text-center">
           <div className="w-full max-w-5xl">
             <h3 className="text-4xl font-semibold">
-              Ready to turn your data into rewards
+              Don’t let your data go to waste.
             </h3>
             <p className="mt-4 text-zinc-300">
-              Click Start Earning to open Privy and begin the flow.
+              Start earning rewards today all while staying private and in
+              control.
             </p>
             <button
               onClick={handleLogin}

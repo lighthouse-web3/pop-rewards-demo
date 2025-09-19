@@ -14,6 +14,9 @@ importers:
       '@reclaimprotocol/js-sdk':
         specifier: ^4.5.0
         version: 4.5.0(@types/node@20.19.16)(conventional-commits-filter@5.0.0)(conventional-commits-parser@6.2.0)
+      lucide-react:
+        specifier: ^0.544.0
+        version: 0.544.0(react@19.1.0)
       next:
         specifier: 15.5.3
         version: 15.5.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -2811,6 +2814,11 @@ packages:
     resolution: {integrity: sha512-13xlG0CQCJtzjSQYwwJ3WRqMHtRj3EXmLlorrARt7y+IHnxUCp3XyFNL1DfaGySWxHObDvnu1u1dV+0VMKHUSg==}
     peerDependencies:
       react: ^16.5.1 || ^17.0.0 || ^18.0.0
+
+  lucide-react@0.544.0:
+    resolution: {integrity: sha512-t5tS44bqd825zAW45UQxpG2CvcC4urOwn2TrwSH8u+MjeE+1NnWl6QqeQ/6NdjMqdOygyiT9p3Ev0p1NJykxjw==}
+    peerDependencies:
+      react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
   macos-release@3.4.0:
     resolution: {integrity: sha512-wpGPwyg/xrSp4H4Db4xYSeAr6+cFQGHfspHzDUdYxswDnUW0L5Ov63UuJiSr8NMSpyaChO4u1n0MXUvVPtrN6A==}
@@ -7885,6 +7893,10 @@ snapshots:
   lru-cache@7.18.3: {}
 
   lucide-react@0.383.0(react@19.1.0):
+    dependencies:
+      react: 19.1.0
+
+  lucide-react@0.544.0(react@19.1.0):
     dependencies:
       react: 19.1.0
 

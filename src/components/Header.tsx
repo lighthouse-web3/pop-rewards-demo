@@ -5,15 +5,22 @@ import { usePrivy } from "@privy-io/react-auth";
 import { COLORS } from "@/lib/colors"; // or inline your colors
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect } from "react";
 
 export default function Header() {
   const router = useRouter();
   const pathname = usePathname();
   const { ready, authenticated, login, logout } = usePrivy();
 
+  useEffect(() => {
+    if (ready && authenticated && pathname !== "/dashboard") {
+      router.replace("/dashboard");
+    }
+  }, [ready, authenticated, pathname, router]);
+
   const handleLogin = async () => {
     await login(); // opens Privy modal with external wallets
-    router.push("/dashboard");
+    // redirect is now handled by useEffect
   };
 
   const handleLogout = async () => {
@@ -25,7 +32,8 @@ export default function Header() {
     <>
       <header
         className="fixed inset-x-0 top-0 z-40 border-b border-white/10 backdrop-blur-md"
-        style={{ backgroundColor: "rgba(20,26,59,0.55)" }}
+        // header style
+        style={{ backgroundColor: "rgba(11,15,9,0.60)" }}
       >
         <div className="mx-auto max-w-8xl px-4 md:px-6">
           <div className="flex h-14 md:h-16 items-center justify-between">

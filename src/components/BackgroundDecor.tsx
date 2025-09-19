@@ -1,23 +1,26 @@
 export default function BackgroundDecor() {
   return (
     <div className="pointer-events-none absolute inset-0">
-      {/* Grey grid background */}
+      {/* subtle diagonal hatch, tinted green so it doesn’t read purple/blue */}
       <div
-        className="absolute inset-0 z-0"
+        className="absolute inset-0 opacity-15"
         style={{
-          backgroundImage: `
-          linear-gradient(to right, rgba(120,120,120,0.1) 1px, transparent 1px),
-          linear-gradient(to bottom, rgba(120,120,120,0.1) 1px, transparent 1px)
-        `,
-          backgroundSize: "32px 32px",
+          background:
+            "repeating-linear-gradient(45deg, rgba(168,255,0,0.06) 0, rgba(168,255,0,0.06) 2px, transparent 2px, transparent 26px)",
         }}
       />
-      {/* Existing radial grid */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:20px_20px] opacity-20 z-10" />
-      {/* Blur blobs */}
-      <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-fuchsia-600/30 blur-[100px] z-20" />
-      <div className="absolute top-40 -right-24 h-72 w-72 rounded-full bg-emerald-500/30 blur-[100px] z-20" />
-      <div className="absolute bottom-0 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-indigo-500/20 blur-[120px] z-20" />
+
+      {/* neon-green glows (no blue/teal) */}
+      <div
+        className="absolute inset-0 mix-blend-screen"
+        style={{
+          background: `
+            radial-gradient(600px 220px at 14% 14%, rgba(57,255,20,0.18), transparent 60%),
+            radial-gradient(520px 200px at 86% 18%, rgba(168,255,0,0.14), transparent 60%),
+            radial-gradient(440px 180px at 50% 88%, rgba(120,255,80,0.12), transparent 70%)
+          `,
+        }}
+      />
     </div>
   );
 }
