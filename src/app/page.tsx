@@ -8,12 +8,12 @@ import BackgroundDecor from "@/components/BackgroundDecor";
 import HowCard from "@/components/ui/HowCard";
 import FAQ from "@/components/ui/FAQ";
 import { usePrivy } from "@privy-io/react-auth";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 export default function HomePage() {
-  const [loading, setLoading] = useState(false);
+  const [loading] = useState(false);
   const router = useRouter();
-  const { ready, authenticated, login, logout } = usePrivy();
+  const { login } = usePrivy();
 
   const handleLogin = async () => {
     await login(); // opens Privy modal with external wallets

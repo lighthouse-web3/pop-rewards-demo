@@ -12,7 +12,7 @@ import { usePrivy } from "@privy-io/react-auth";
 import { ReclaimProofRequest } from "@reclaimprotocol/js-sdk";
 
 export default function DashboardPage() {
-  const { ready, authenticated, user } = usePrivy();
+  const { user } = usePrivy();
   const address = user?.wallet?.address || "";
   const addr = short(address) || "-";
   const [tab, setTab] = useState<
