@@ -30,7 +30,6 @@ export default function DashboardPage() {
       const APP_SECRET = process.env.NEXT_PUBLIC_RECLAIM_APP_SECRET || "";
       const PROVIDER_ID = process.env.NEXT_PUBLIC_RECLAIM_PROVIDER_ID || "";
 
-      // Initialize the Reclaim SDK with your credentials
       const reclaimProofRequest = await ReclaimProofRequest.init(
         APP_ID,
         APP_SECRET,
