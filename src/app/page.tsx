@@ -42,7 +42,7 @@ export default function HomePage() {
         <Header />
 
         {/* Hero */}
-        <section className="relative z-10 mx-auto flex w-full max-w-5xl flex-col items-center justify-center px-6 py-28 md:py-32 text-center min-h-screen">
+        <section className="relative z-10 mx-auto flex w-full max-w-5xl flex-col items-center justify-center px-6 py-28 md:py-32 text-center md:min-h-screen">
           <h1
             className="text-4xl font-semibold leading-tight md:text-6xl"
             style={{ color: COLORS.headline }}

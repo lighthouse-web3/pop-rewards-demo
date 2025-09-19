@@ -2,15 +2,28 @@
 
 import { useRouter, usePathname } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
-import { COLORS } from "@/lib/colors"; // or inline your colors
+import { COLORS } from "@/lib/colors";
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import MobileDrawer from "@/components/MobileDrawer";
+import {
+  Menu,
+  Gift,
+  LogIn,
+  LogOut,
+  LayoutGrid,
+  Trophy,
+  Route,
+  Plug2,
+  Plus,
+} from "lucide-react";
 
 export default function Header() {
   const router = useRouter();
   const pathname = usePathname();
   const { ready, authenticated, login, logout } = usePrivy();
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     if (ready && authenticated && pathname !== "/dashboard") {
@@ -19,8 +32,7 @@ export default function Header() {
   }, [ready, authenticated, pathname, router]);
 
   const handleLogin = async () => {
-    await login(); // opens Privy modal with external wallets
-    // redirect is now handled by useEffect
+    await login();
   };
 
   const handleLogout = async () => {
@@ -28,30 +40,65 @@ export default function Header() {
     if (pathname !== "/") router.push("/");
   };
 
+  const NavButton = ({
+    href,
+    children,
+    icon,
+  }: {
+    href: string;
+    children: React.ReactNode;
+    icon: React.ReactNode;
+  }) => (
+    <Link
+      href={href}
+      onClick={() => setOpen(false)}
+      className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${
+        pathname === href ? "bg-white/10" : "hover:bg-white/5"
+      }`}
+    >
+      <span className="opacity-90">{icon}</span>
+      <span>{children}</span>
+    </Link>
+  );
+
   return (
     <>
       <header
         className="fixed inset-x-0 top-0 z-40 border-b border-white/10 backdrop-blur-md"
-        // header style
         style={{ backgroundColor: "rgba(11,15,9,0.60)" }}
       >
         <div className="mx-auto max-w-8xl px-4 md:px-6">
           <div className="flex h-14 md:h-16 items-center justify-between">
-            <Link href={"/"}>
-              <div className="flex items-center gap-3">
-                <Image src={"/logo.png"} alt="Logo" width={48} height={24} />
+            {/* Left: hamburger (mobile) + logo */}
+            <div className="flex items-center justify-between w-full gap-3">
+              <Link href={"/"} className="flex items-center gap-3">
+                <Image
+                  src={"/logo.png"}
+                  alt="Logo"
+                  width={28}
+                  height={28}
+                  className="rounded-xl"
+                />
                 <span className="text-lg font-semibold tracking-tight">
                   pop.rewards
                 </span>
-              </div>
-            </Link>
+              </Link>
+              <button
+                className="mr-1 rounded-lg p-2 hover:bg-white/10 md:hidden"
+                aria-label="Open menu"
+                onClick={() => setOpen(true)}
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+            </div>
 
-            <div className="flex items-center gap-2 md:gap-3">
+            {/* Right: actions (hidden on mobile) */}
+            <div className="hidden items-center gap-2 md:flex">
               {!ready ? null : authenticated ? (
                 <>
                   <button
                     onClick={() => router.push("/dashboard")}
-                    className="inline-flex h-9 items-center rounded-full border border-white/15 px-3 text-sm text-white hover:bg-white/10"
+                    className="inline-flex h-9 items-center rounded-full border border-white/15 px-3 text-sm text-white hover:bg:white/10 hover:bg-white/10"
                   >
                     Dashboard
                   </button>
@@ -86,6 +133,91 @@ export default function Header() {
         </div>
       </header>
       <div className="h-14 md:h-16" />
+
+      {/* Mobile drawer */}
+      <MobileDrawer open={open} onClose={() => setOpen(false)}>
+        {/* Primary mobile CTA */}
+
+        <nav className="grid gap-1">
+          <NavButton
+            href="/dashboard"
+            icon={<LayoutGrid className="h-4 w-4" />}
+          >
+            Overview
+          </NavButton>
+          <NavButton
+            href="/dashboard/leaderboard"
+            icon={<Trophy className="h-4 w-4" />}
+          >
+            Leaderboard
+          </NavButton>
+          <NavButton
+            href="/dashboard/journey"
+            icon={<Route className="h-4 w-4" />}
+          >
+            Journey
+          </NavButton>
+          <NavButton
+            href="/dashboard/connected"
+            icon={<Plug2 className="h-4 w-4" />}
+          >
+            Connected Data
+          </NavButton>
+        </nav>
+
+        <div className="my-4 h-px bg-white/10" />
+        <button
+          onClick={() => {
+            setOpen(false);
+            // emit a custom event or open your connect-provider modal
+            document
+              .getElementById("connect-data-modal")
+              ?.dispatchEvent(new CustomEvent("open"));
+          }}
+          className="mb-3 flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2 font-medium text-black"
+          style={{
+            background: `linear-gradient(90deg, ${COLORS.yellowFrom}, ${COLORS.yellowTo})`,
+            color: "#061106",
+          }}
+        >
+          <Plus className="h-5 w-5" /> Add Data
+        </button>
+        {/* Secondary actions */}
+        <div className="grid gap-2">
+          <button
+            onClick={() => {
+              setOpen(false);
+              if (!authenticated) handleLogin();
+              else window.location.assign("/airdrop");
+            }}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/15 px-3 py-2 text-sm hover:bg-white/10"
+          >
+            <Gift className="h-4 w-4" /> $POP Airdrop
+          </button>
+
+          {!ready ? null : authenticated ? (
+            <button
+              onClick={() => {
+                setOpen(false);
+                handleLogout();
+              }}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/15 px-3 py-2 text-sm hover:bg-white/10"
+            >
+              <LogOut className="h-4 w-4" /> Sign Out
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                setOpen(false);
+                handleLogin();
+              }}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/15 px-3 py-2 text-sm hover:bg-white/10"
+            >
+              <LogIn className="h-4 w-4" /> Sign Up
+            </button>
+          )}
+        </div>
+      </MobileDrawer>
     </>
   );
 }
