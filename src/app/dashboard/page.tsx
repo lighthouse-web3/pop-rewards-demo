@@ -11,6 +11,25 @@ import RequireAuth from "@/components/RequireAuth";
 import { usePrivy } from "@privy-io/react-auth";
 import { ReclaimProofRequest } from "@reclaimprotocol/js-sdk";
 
+type ProofRecord = {
+  id: string;
+  address: string;
+  username: string;
+  cid: string;
+  providerId: string;
+  createdAt: string;
+  points?: number;
+};
+
+function fmtDate(iso: string) {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString();
+  } catch {
+    return iso;
+  }
+}
+
 export default function DashboardPage() {
   const { user } = usePrivy();
   const address = user?.wallet?.address || "";
@@ -20,37 +39,131 @@ export default function DashboardPage() {
   >("overview");
   const [proofs, setProofs] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [serverOut, setServerOut] = useState<{
+    cid: string;
+    record?: any;
+  } | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string>("");
+  const [verifiedCount, setVerifiedCount] = useState<number>(0);
+  const [myRecords, setMyRecords] = useState<ProofRecord[]>([]);
+  const [loadingProofs, setLoadingProofs] = useState(false);
+
+  const fetchMyProofs = async () => {
+    if (!address) return;
+    try {
+      setLoadingProofs(true);
+      const res = await fetch("/api/me", { headers: { "x-session": address } });
+      const data = await res.json();
+      const rows: ProofRecord[] = Array.isArray(data?.records)
+        ? data.records
+        : [];
+      // newest first
+      rows.sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+      setMyRecords(rows);
+      setVerifiedCount(rows.length);
+    } catch (e) {
+      console.error("Failed to load /api/me:", e);
+    } finally {
+      setLoadingProofs(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMyProofs();
+  }, [address]);
+
+  function extractUsernameFromProofs(p: any): string {
+    try {
+      // proof can be an array or single object; context may be stringified JSON
+      const ctx = Array.isArray(p)
+        ? p?.[0]?.claimData?.context
+        : p?.claimData?.context;
+      const parsed = typeof ctx === "string" ? JSON.parse(ctx) : ctx;
+      return parsed?.extractedParameters?.username ?? "";
+    } catch {
+      return "";
+    }
+  }
+
+  const loadMine = async () => {
+    const r = await fetch("/api/me", { headers: { "x-session": address } });
+    const { records } = await r.json();
+    console.log(records);
+  };
 
   const handleVerification = async () => {
+    setErrorMsg("");
+    setServerOut(null);
+    setProofs(null);
+
+    if (!address) {
+      setErrorMsg("No wallet address found. Please sign in with Privy first.");
+      return;
+    }
+
     try {
       setIsLoading(true);
 
-      // Your credentials from the Reclaim Protocol Developer Portal
       const APP_ID = process.env.NEXT_PUBLIC_RECLAIM_APP_ID || "";
       const APP_SECRET = process.env.NEXT_PUBLIC_RECLAIM_APP_SECRET || "";
       const PROVIDER_ID = process.env.NEXT_PUBLIC_RECLAIM_PROVIDER_ID || "";
 
-      const reclaimProofRequest = await ReclaimProofRequest.init(
+      if (!APP_ID || !APP_SECRET || !PROVIDER_ID) {
+        throw new Error("Reclaim env vars are missing.");
+      }
+
+      const reclaim = await ReclaimProofRequest.init(
         APP_ID,
         APP_SECRET,
         PROVIDER_ID
       );
 
-      // Trigger the verification session
-      await reclaimProofRequest.triggerReclaimFlow();
+      // Start native/QR flow
+      await reclaim.triggerReclaimFlow();
 
-      await reclaimProofRequest.startSession({
-        onSuccess: (proofs: any) => {
-          setProofs(proofs);
-          setIsLoading(false);
-        },
-        onError: (error: any) => {
-          console.error("Verification failed", error);
-          setIsLoading(false);
-        },
+      await new Promise<void>((resolve, reject) => {
+        reclaim.startSession({
+          onSuccess: async (p: any) => {
+            try {
+              setProofs(p);
+
+              // Extract a username if present (safe parser)
+              const username = extractUsernameFromProofs(p) || "anon";
+
+              // Send to our backend: verify → upload to Lighthouse → store in JSON db
+              const res = await fetch("/api/proofs", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "x-session": address, // bind to user wallet
+                },
+                body: JSON.stringify({ proofs: p, username }),
+              });
+
+              const data = await res.json();
+              if (!res.ok) throw new Error(data?.error || "Server error");
+
+              setServerOut({ cid: data.cid, record: data.record });
+              await fetchMyProofs();
+            } catch (err: any) {
+              console.error(err);
+              setErrorMsg(err?.message || "Failed to save proof");
+            } finally {
+              setIsLoading(false);
+              resolve();
+            }
+          },
+          onError: (err: any) => {
+            console.error("Verification failed", err);
+            setErrorMsg("Verification failed. Please try again.");
+            setIsLoading(false);
+            reject(err);
+          },
+        });
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error starting verification:", error);
+      setErrorMsg(error?.message || "Could not start verification");
       setIsLoading(false);
     }
   };
@@ -133,16 +246,27 @@ export default function DashboardPage() {
                 >
                   {isLoading ? "Verifying..." : "Add Data"}
                 </button>
-                {proofs && (
+                {serverOut && (
                   <div className="mt-3 text-sm text-emerald-300 text-center">
-                    <h2>Verification Successful!</h2>
-
-                    <pre>
-                      {
-                        JSON.parse(proofs.claimData.context).extractedParameters
-                          .username
-                      }
-                    </pre>
+                    <div className="font-medium">
+                      Verified ✓ & uploaded to Lighthouse
+                    </div>
+                    <div className="mt-1 text-zinc-200 break-all">
+                      CID: <code className="text-xs">{serverOut.cid}</code>
+                    </div>
+                    <a
+                      href={`https://gateway.lighthouse.storage/ipfs/${serverOut.cid}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-2 inline-block rounded-lg border border-white/15 px-3 py-1 text-xs text-white hover:bg-white/10"
+                    >
+                      View JSON ↗
+                    </a>
+                  </div>
+                )}
+                {errorMsg && (
+                  <div className="mt-3 text-sm text-red-400 text-center">
+                    {errorMsg}
                   </div>
                 )}
               </div>
@@ -150,7 +274,13 @@ export default function DashboardPage() {
 
             {/* right pane */}
             <section className="themed-scroll grid h-full gap-6 overflow-y-auto pr-1">
-              {tab === "overview" && <OverviewPane />}
+              {tab === "overview" && (
+                <OverviewPane
+                  verifiedCount={verifiedCount}
+                  records={myRecords}
+                  loadingProofs={loadingProofs}
+                />
+              )}
               {tab === "journey" && <PlaceholderPane label="Journey" />}
               {tab === "leaderboard" && <JourneyPane />}
             </section>
@@ -201,7 +331,15 @@ function ConnectTile({ icon, title }: { icon: string; title: string }) {
   );
 }
 
-function OverviewPane() {
+function OverviewPane({
+  verifiedCount,
+  records,
+  loadingProofs,
+}: {
+  verifiedCount: number;
+  records: ProofRecord[];
+  loadingProofs: boolean;
+}) {
   return (
     <>
       <header>
@@ -237,8 +375,8 @@ function OverviewPane() {
         />
         <SmallStat
           label="Proofs Verified"
-          value="0"
-          delta="+0 today"
+          value={String(verifiedCount)}
+          delta={verifiedCount ? "live from /api/me" : "no proofs yet"}
           icon="✅"
         />
       </div>
@@ -270,15 +408,77 @@ function OverviewPane() {
         </div>
 
         <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-          <div className="mb-2 flex items-center gap-2 text-lg font-semibold">
-            Proof Journal
+          <div className="mb-2 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-lg font-semibold">
+              Proof Journal
+              <span className="text-xs font-normal text-zinc-400">
+                {verifiedCount} total
+              </span>
+            </div>
+            <button
+              onClick={() => fetch("/api/me", { headers: { "x-session": "" } })}
+              className="hidden rounded-lg border border-white/15 px-3 py-1.5 text-xs hover:bg-white/10"
+              disabled
+              title="future: filter/export"
+            >
+              Export
+            </button>
           </div>
-          <p className="text-sm text-zinc-300">
-            Track each proof you submit and the POP awarded.
+
+          <p className="mb-3 text-sm text-zinc-300">
+            Every verified proof is stored as a compact JSON on Lighthouse.
           </p>
-          <button className="mt-4 w-full rounded-xl border border-white/15 px-4 py-2 text-sm hover:bg-white/10">
-            View Journal
-          </button>
+
+          {/* list (show ~2 rows, scroll the rest) */}
+          <div className="themed-scroll h-[148px] overflow-y-auto rounded-xl border border-white/10 bg-black/20">
+            {loadingProofs ? (
+              <div className="px-4 py-6 text-center text-sm text-zinc-400">
+                Loading…
+              </div>
+            ) : records.length === 0 ? (
+              <div className="px-4 py-6 text-center text-sm text-zinc-400">
+                No proofs yet. Add data to get started.
+              </div>
+            ) : (
+              <ul className="divide-y divide-white/10">
+                {records.map((r) => (
+                  <li
+                    key={r.id}
+                    className="flex items-center justify-between gap-3 px-4 py-3"
+                  >
+                    <div className="min-w-0">
+                      <div className="truncate text-sm">
+                        <span className="text-zinc-300">Username:</span>{" "}
+                        <span className="font-medium truncate">
+                          {r.username || "anon"}
+                        </span>
+                      </div>
+                      <div className="mt-0.5 text-xs text-zinc-400">
+                        {fmtDate(r.createdAt)} • Provider:{" "}
+                        {r.providerId || "unknown"}
+                      </div>
+                    </div>
+                    <div className="flex flex-none items-center gap-2">
+                      {typeof r.points === "number" && (
+                        <span className="rounded-md bg-emerald-400/15 px-2 py-1 text-xs text-emerald-300">
+                          +{r.points} pts
+                        </span>
+                      )}
+                      <a
+                        href={`https://gateway.lighthouse.storage/ipfs/${r.cid}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-md border border-white/15 px-2 py-1 text-xs hover:bg-white/10"
+                        title={r.cid}
+                      >
+                        View JSON
+                      </a>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
       </div>
 
@@ -299,7 +499,7 @@ function OverviewPane() {
           <input
             className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm"
             readOnly
-            value="https://pop.rewards/app?ref=0x90...132a"
+            value="https://pantrypoints.rewards/app?ref=0x90...132a"
           />
           <button className="rounded-lg border border-white/10 px-3 py-2 text-sm hover:bg-white/10">
             Copy

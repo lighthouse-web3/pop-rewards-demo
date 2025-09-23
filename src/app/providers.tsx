@@ -22,7 +22,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           walletConnect: {
             enabled: true,
           },
-          coinbaseWallet: { config: { appName: "POP Rewards" } },
+          coinbaseWallet: { config: { appName: "Pantry Points" } },
         },
         appearance: {
           theme: "dark",

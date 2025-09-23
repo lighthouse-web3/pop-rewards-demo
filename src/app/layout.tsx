@@ -12,8 +12,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "POP Rewards",
-  description: "Proof of Purchase demo",
+  title: "Pantry Points",
+  description: "EthGlobal New Delhi demo",
 };
 
 export default function RootLayout({

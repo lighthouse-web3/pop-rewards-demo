@@ -93,7 +93,7 @@ export default function Header() {
                   className="rounded-xl"
                 />
                 <span className="text-lg font-semibold tracking-tight">
-                  pop.rewards
+                  Pantry Points
                 </span>
               </Link>
               <button
@@ -106,18 +106,18 @@ export default function Header() {
             </div>
 
             {/* Right: actions (hidden on mobile) */}
-            <div className="hidden items-center gap-2 md:flex">
+            <div className="hidden md:flex items-center gap-2 flex-nowrap">
               {!ready ? null : authed ? (
                 <>
                   <button
                     onClick={() => router.push("/dashboard")}
-                    className="inline-flex h-9 items-center rounded-full border border-white/15 px-3 text-sm text-white hover:bg-white/10"
+                    className="inline-flex h-9 items-center rounded-full border border-white/15 px-3 text-sm text-white hover:bg-white/10 whitespace-nowrap break-normal leading-none hyphens-none"
                   >
                     Dashboard
                   </button>
                   <button
                     onClick={handleLogout}
-                    className="inline-flex h-9 items-center rounded-full border border-white/15 px-3 text-sm text-white hover:bg-white/10"
+                    className="inline-flex h-9 items-center rounded-full border border-white/15 px-3 text-sm text-white hover:bg-white/10 whitespace-nowrap break-normal leading-none hyphens-none"
                   >
                     Sign Out
                   </button>
@@ -126,7 +126,7 @@ export default function Header() {
                 <>
                   <button
                     onClick={handleLogin}
-                    className="inline-flex h-9 items-center rounded-full px-3.5 text-sm font-medium text-black shadow-sm"
+                    className="inline-flex h-9 items-center rounded-full px-3.5 text-sm font-medium text-black shadow-sm whitespace-nowrap break-normal leading-none hyphens-none"
                     style={{
                       background: `linear-gradient(90deg, ${COLORS.yellowFrom}, ${COLORS.yellowTo})`,
                     }}
@@ -135,7 +135,7 @@ export default function Header() {
                   </button>
                   <button
                     onClick={handleLogin}
-                    className="inline-flex h-9 items-center rounded-full border border-white/15 px-4 text-sm text-white hover:bg-white/10"
+                    className="inline-flex h-9 items-center rounded-full border border-white/15 px-4 text-sm text-white hover:bg-white/10 whitespace-nowrap break-normal leading-none hyphens-none"
                   >
                     Sign Up
                   </button>
