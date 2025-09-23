@@ -44,15 +44,14 @@ export default function HomePage() {
         {/* Hero */}
         <section className="relative z-10 mx-auto flex w-full max-w-5xl flex-col items-center justify-center px-6 py-28 md:py-32 text-center md:min-h-screen">
           <h1
-            className="text-4xl font-semibold leading-tight md:text-6xl"
+            className="text-4xl font-semibold leading-tight md:text-5xl"
             style={{ color: COLORS.headline }}
           >
-            Turn your shopping into rewards.
+            Get cashback for your Zomato orders
           </h1>
           <p className="mt-4 max-w-2xl text-pretty text-zinc-300">
-            Your Amazon order history has value. With POP Rewards, you stay in
-            control of your data while earning crypto for every purchase you
-            prove.
+            Prove your recent Zomato activity privately with zkTLS, store a
+            redacted summary on Lighthouse, and earn POP Tokens.
           </p>
           <button
             onClick={handleLogin}
@@ -106,8 +105,8 @@ export default function HomePage() {
               />
               <HowCard
                 icon={<FileCheck className="w-6 h-6" />}
-                title="Verify Purchases"
-                desc="Run a quick check with zkTLS to prove your Amazon purchases privately."
+                title="Verify Orders"
+                desc="Run a quick check with zkTLS to prove your Zomato Orders privately."
               />
               <HowCard
                 icon={<Database className="w-6 h-6" />}

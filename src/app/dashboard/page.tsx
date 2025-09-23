@@ -399,7 +399,7 @@ function OverviewPane({
                 start earning POP.
               </div>
               <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-zinc-200">
-                <li>Connect your Amazon account</li>
+                <li>Connect your Zomato account</li>
                 <li>Run a Reclaim proof for last 30 days</li>
                 <li>Mint POP rewards after verification</li>
               </ul>
