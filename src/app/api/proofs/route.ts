@@ -1,6 +1,7 @@
+// apps/api/proofs/route.ts
 import { NextResponse } from "next/server";
 import { verifyProof } from "@reclaimprotocol/js-sdk";
-import { addRecord, ProofRecord } from "@/lib/db";
+import { addProof, addOrders, ProofRecord } from "@/lib/db";
 import { getCallerAddress } from "@/lib/auth";
 
 export const runtime = "nodejs";
@@ -17,6 +18,22 @@ function cors() {
 
 export async function OPTIONS() {
   return new NextResponse(null, { headers: cors() });
+}
+
+// helpers
+function inrToNumber(text?: string | null): number | null {
+  if (!text) return null;
+  // remove currency, commas, spaces
+  const cleaned = text.replace(/[₹,\s]/g, "");
+  const n = Number(cleaned);
+  return Number.isFinite(n) ? n : null;
+}
+
+function parseOrderDate(s?: string | null): string | null {
+  if (!s) return null;
+  // s like: "August 13, 2025 at 08:14 PM"
+  const d = new Date(s.replace(" at ", " "));
+  return isNaN(+d) ? null : d.toISOString();
 }
 
 export async function POST(req: Request) {
@@ -37,6 +54,7 @@ export async function POST(req: Request) {
         { status: 400, headers }
       );
 
+    // 1) Verify Reclaim proof
     const valid = await verifyProof(proofs);
     if (!valid)
       return NextResponse.json(
@@ -44,6 +62,30 @@ export async function POST(req: Request) {
         { status: 400, headers }
       );
 
+    // 2) Extract Zomato orders
+    const ordersRaw: any[] =
+      proofs?.publicData?.orders || proofs?.[0]?.publicData?.orders || [];
+    const normalized = ordersRaw.map((o) => {
+      const delivered = Number(o?.deliveryDetails?.deliveryStatus) || null;
+      return {
+        orderId: Number(o?.orderId),
+        orderDate: parseOrderDate(o?.orderDate),
+        totalCostNum: inrToNumber(o?.totalCost),
+        totalCostText: o?.totalCost ?? null,
+        dishString: o?.dishString ?? null,
+        deliveryStatus: delivered,
+        deliveryLabel: o?.deliveryDetails?.deliveryLabel ?? null,
+        restaurantURL: o?.restaurantURL ?? null,
+      };
+    });
+
+    // Scoring: delivered only (status === 4)
+    const delivered = normalized.filter((o) => o.deliveryStatus === 4);
+    const orderCount = delivered.length;
+    const amountTotal =
+      delivered.reduce((sum, o) => sum + (o.totalCostNum || 0), 0) || 0;
+
+    // 3) Upload a compact summary to Lighthouse
     const apiKey = process.env.LIGHTHOUSE_API_KEY;
     if (!apiKey)
       return NextResponse.json(
@@ -51,38 +93,66 @@ export async function POST(req: Request) {
         { status: 500, headers }
       );
 
-    // Compact redacted JSON
     const payload = {
-      username,
+      username: username || null,
       address: address.toLowerCase(),
-      providerId: process.env.NEXT_PUBLIC_RECLAIM_PROVIDER_ID,
+      providerId: process.env.NEXT_PUBLIC_RECLAIM_PROVIDER_ID || "zomato",
       createdAt: new Date().toISOString(),
+      summary: {
+        orderCount,
+        amountTotalINR: Number(amountTotal.toFixed(2)),
+        deliveredOrderIds: delivered.slice(0, 50).map((o) => o.orderId), // keep it compact
+      },
     };
-    const text = JSON.stringify(payload);
 
     const lighthouse = (await import("@lighthouse-web3/sdk")).default;
-    const uploadRes = await lighthouse.uploadText(text, apiKey);
+    const uploadRes = await lighthouse.uploadText(
+      JSON.stringify(payload),
+      apiKey
+    );
     const cid: string = uploadRes?.data?.Hash;
     if (!cid) throw new Error("No CID returned from Lighthouse");
 
-    // +1 per proof, same as before
-    const record: ProofRecord = {
-      id: crypto.randomUUID(), // let’s use uuid now
+    // 4) Save proof row
+    const proof: ProofRecord = {
+      id: crypto.randomUUID(),
       address: address.toLowerCase(),
       username: username || "anon",
       cid,
-      providerId: process.env.NEXT_PUBLIC_RECLAIM_PROVIDER_ID || "unknown",
+      providerId: process.env.NEXT_PUBLIC_RECLAIM_PROVIDER_ID || "zomato",
       createdAt: new Date().toISOString(),
-      points: 1,
+      points: Math.max(1, orderCount), // simple scoring: >=1 point
+      orderCount,
+      amountTotal: Number(amountTotal.toFixed(2)),
     };
+    const saved = await addProof(proof);
 
-    await addRecord(record);
+    // 5) Save orders (all, not just delivered; up to you)
+    await addOrders(
+      normalized.map((o) => ({
+        proofId: saved.id,
+        address: address.toLowerCase(),
+        orderId: o.orderId,
+        orderDate: o.orderDate,
+        totalCostNum: o.totalCostNum,
+        totalCostText: o.totalCostText,
+        dishString: o.dishString,
+        deliveryStatus: o.deliveryStatus,
+        deliveryLabel: o.deliveryLabel,
+        restaurantURL: o.restaurantURL,
+      }))
+    );
 
-    // optional: refresh MV if you used it
+    // OPTIONAL: refresh MV if you use it
     // await supa.rpc("refresh_leaderboard");
 
     return NextResponse.json(
-      { success: true, cid, record },
+      {
+        success: true,
+        cid,
+        record: saved,
+        metrics: { orderCount, amountTotal: Number(amountTotal.toFixed(2)) },
+      },
       { status: 200, headers }
     );
   } catch (e) {

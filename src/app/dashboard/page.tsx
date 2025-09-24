@@ -21,6 +21,26 @@ type ProofRecord = {
   points?: number;
 };
 
+type OrderRow = {
+  orderId: number;
+  orderDate: string | null;
+  totalCostNum: number | null;
+  deliveryStatus: number | null; // 4 = Delivered
+};
+
+const INR = new Intl.NumberFormat("en-IN", {
+  style: "currency",
+  currency: "INR",
+  maximumFractionDigits: 0,
+});
+
+function isWithinLastDays(iso: string | null, days = 30) {
+  if (!iso) return false;
+  const d = new Date(iso).getTime();
+  const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+  return d >= cutoff;
+}
+
 function fmtDate(iso: string) {
   try {
     const d = new Date(iso);
@@ -48,19 +68,47 @@ export default function DashboardPage() {
   const [myRecords, setMyRecords] = useState<ProofRecord[]>([]);
   const [loadingProofs, setLoadingProofs] = useState(false);
 
+  const [orders, setOrders] = useState<OrderRow[]>([]);
+  const [statOrders30d, setStatOrders30d] = useState(0);
+  const [statSpend30d, setStatSpend30d] = useState(0);
+  const [statProviders, setStatProviders] = useState(0);
+
   const fetchMyProofs = async () => {
     if (!address) return;
     try {
       setLoadingProofs(true);
-      const res = await fetch("/api/me", { headers: { "x-session": address } });
+      // include=orders to get both
+      const res = await fetch("/api/me?include=orders", {
+        headers: { "x-session": address },
+      });
       const data = await res.json();
+
       const rows: ProofRecord[] = Array.isArray(data?.records)
         ? data.records
         : [];
-      // newest first
       rows.sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
       setMyRecords(rows);
       setVerifiedCount(rows.length);
+
+      const os: OrderRow[] = Array.isArray(data?.orders) ? data.orders : [];
+      setOrders(os);
+
+      // compute: unique providers from proofs
+      const providers = new Set(
+        rows.map((r) => (r.providerId || "").toLowerCase()).filter(Boolean)
+      );
+      setStatProviders(Math.max(1, providers.size)); // fallback to 1 if empty
+
+      // compute: last 30d delivered orders & spend
+      const recentDelivered = os.filter(
+        (o) => o.deliveryStatus === 4 && isWithinLastDays(o.orderDate, 30)
+      );
+      setStatOrders30d(recentDelivered.length);
+      const spend = recentDelivered.reduce(
+        (sum, o) => sum + (o.totalCostNum || 0),
+        0
+      );
+      setStatSpend30d(spend);
     } catch (e) {
       console.error("Failed to load /api/me:", e);
     } finally {
@@ -125,6 +173,7 @@ export default function DashboardPage() {
         reclaim.startSession({
           onSuccess: async (p: any) => {
             try {
+              console.log("orders", p.publicData.orders);
               setProofs(p);
 
               // Extract a username if present (safe parser)
@@ -279,6 +328,9 @@ export default function DashboardPage() {
                   verifiedCount={verifiedCount}
                   records={myRecords}
                   loadingProofs={loadingProofs}
+                  statOrders30d={statOrders30d}
+                  statSpend30d={statSpend30d}
+                  statProviders={statProviders}
                 />
               )}
               {tab === "journey" && <PlaceholderPane label="Journey" />}
@@ -335,10 +387,16 @@ function OverviewPane({
   verifiedCount,
   records,
   loadingProofs,
+  statOrders30d,
+  statSpend30d,
+  statProviders,
 }: {
   verifiedCount: number;
   records: ProofRecord[];
   loadingProofs: boolean;
+  statOrders30d: number;
+  statSpend30d: number; // INR (numeric)
+  statProviders: number;
 }) {
   return (
     <>
@@ -357,20 +415,20 @@ function OverviewPane({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <SmallStat
           label="Orders (30d)"
-          value="0"
-          delta="+0% vs last month"
+          value={String(statOrders30d)}
+          delta={loadingProofs ? "loading…" : "delivered only"}
           icon="🛒"
         />
         <SmallStat
           label="Est. Spend (30d)"
-          value="$0"
-          delta="+0% vs last month"
+          value={INR.format(statSpend30d)}
+          delta={loadingProofs ? "loading…" : "delivered only"}
           icon="💳"
         />
         <SmallStat
           label="Providers Connected"
-          value="1"
-          delta="+0 new"
+          value={String(statProviders)}
+          delta={statProviders > 1 ? "multiple sources" : "zomato"}
           icon="🔌"
         />
         <SmallStat
